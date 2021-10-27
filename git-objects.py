@@ -28,12 +28,9 @@ class GitObject:
 def show_git_objects(mode: str, project: str):
     project = Path(project)
     objects_dir = project / ".git/objects"
-    objects_prefix_dir = [
-        f for f in objects_dir.iterdir() if f.name not in {"info", "pack"}
-    ]
     objects = list(
         itertools.chain(
-            *[[f"{d.name}{f.name}" for f in d.iterdir()] for d in objects_prefix_dir]
+            *[[f"{d.name}{f.name}" for f in d.iterdir()] for d in objects_dir.iterdir() if d.name not in {"info", "pack"}]
         )
     )
     git_objects = []
