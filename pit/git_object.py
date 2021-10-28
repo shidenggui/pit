@@ -75,6 +75,7 @@ class Tree(GitObject):
 
     def __post_init__(self):
         self.type = "tree"
+        self.entries = sorted(self.entries, key=lambda x: x.name)
 
         contents = [entry.saved for entry in self.entries]
         content = b"".join(contents)
