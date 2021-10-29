@@ -1,9 +1,9 @@
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
+from typing import Union
 
-from pit.values import GitFileMode
+from pit.values import GitFileMode, Author
 
 
 @dataclass
@@ -30,10 +30,7 @@ class Blob(GitObject):
 @dataclass()
 class Commit(GitObject):
     tree_oid: str
-    timestamp: int
-    timezone: str  # +0800
-    user_name: str
-    user_email: str
+    author: Author
     message: str
     parent_oid: str = None
 
@@ -41,16 +38,10 @@ class Commit(GitObject):
         self.type = "commit"
 
         # b'commit 188\x00tree 2e81171448eb9f2ee3821e3d447aa6b2fe3ddba1\nauthor shidenggui <longlyshidenggui@gmail.com> 1635305754 +0800\ncommitter shidenggui <longlyshidenggui@gmail.com> 1635305754 +0800\n\nadd a.txt\n'
-        user_info = b"%s <%s> %d %s" % (
-            self.user_name.encode(),
-            self.user_email.encode(),
-            self.timestamp,
-            self.timezone.encode(),
-        )
         contents = [b"tree %s" % self.tree_oid.encode()]
         if self.parent_oid:
             contents.append(b"parent %s" % self.parent_oid.encode())
-        contents.append(b"author %s\ncommitter %s" % (user_info, user_info))
+        contents.append(b"author %s\ncommitter %s" % (self.author, self.author))
         contents.append(b"\n%s\n" % self.message.encode())
         content = b"\n".join(contents)
         self.saved = b"commit %d\x00%s" % (len(content), content)
@@ -76,11 +67,11 @@ class Entry:
 
 @dataclass()
 class Tree(GitObject):
-    entries: list[Entry]
+    entries: list[Union["Tree", Entry]]
 
     def __post_init__(self):
         self.type = "tree"
-        self.entries = sorted(self.entries, key=lambda x: x.path)
+        self.entries = sorted(self.entries, key=lambda x: Path(x.path).name)
 
         contents = [entry.saved for entry in self.entries]
         content = b"".join(contents)
