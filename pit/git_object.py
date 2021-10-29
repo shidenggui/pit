@@ -1,6 +1,9 @@
 import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
+
+from pit.values import GitFileMode
 
 
 @dataclass
@@ -57,14 +60,16 @@ class Commit(GitObject):
 @dataclass()
 class Entry:
     oid: str
-    name: str
-    mode: bytes = field(default=b"100644")
+    path: str
+    mode: bytes = field(init=False)
     saved: bytes = field(init=False)
 
     def __post_init__(self):
+        path = Path(self.path)
+
         self.saved = b"%s %s\x00%s" % (
-            self.mode,
-            self.name.encode(),
+            GitFileMode(path.stat().st_mode),
+            path.name.encode(),
             bytes.fromhex(self.oid),
         )
 
@@ -75,7 +80,7 @@ class Tree(GitObject):
 
     def __post_init__(self):
         self.type = "tree"
-        self.entries = sorted(self.entries, key=lambda x: x.name)
+        self.entries = sorted(self.entries, key=lambda x: x.path)
 
         contents = [entry.saved for entry in self.entries]
         content = b"".join(contents)
@@ -91,7 +96,7 @@ if __name__ == "__main__":
     assert a_txt.saved == b"blob 6\x00hello\n"
 
     print("Test Tree")
-    a_tree = Tree(entries=[Entry(name="a.txt", oid=a_txt.oid)])
+    a_tree = Tree(entries=[Entry(path="a.txt", oid=a_txt.oid)])
     print(a_tree)
     assert (
         a_tree.saved

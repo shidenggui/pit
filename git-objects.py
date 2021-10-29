@@ -14,7 +14,7 @@ class GitObject:
     content: bytes
 
     def display(self, mode: str, max_strlen: int = 88):
-        display = f"<Object> {self.type} {self.length} {self.hash}"
+        display = f"<{self.type.capitalize()}> {self.length} {self.hash}"
         match (mode, self.type):
             case ("full", "blob") if self.length > max_strlen:
                 display += f" : {self.content[:max_strlen]}..."

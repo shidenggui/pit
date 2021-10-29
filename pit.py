@@ -55,7 +55,7 @@ def entrypoint():
                     print(f"Skip dir {file.name} because not supported")
                     continue
                 blob = Blob(content=file.read_bytes())
-                entries.append(Entry(oid=blob.oid, name=file.name))
+                entries.append(Entry(oid=blob.oid, path=str(file)))
                 database.store(blob)
             tree = Tree(entries=entries)
             database.store(tree)
