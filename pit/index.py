@@ -34,10 +34,6 @@ class IndexHeader:
             entries=int.from_bytes(raw[8:12], "big"),
         )
 
-    @classmethod
-    def with_entries(cls, entries: int) -> "IndexHeader":
-        return IndexHeader(prefix="DIRC", version=2, entries=entries)
-
     def __bytes__(self):
         return b"%s%s%s" % (
             self.prefix.encode(),
