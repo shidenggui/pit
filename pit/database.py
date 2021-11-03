@@ -2,6 +2,7 @@ from pathlib import Path
 import zlib
 
 from pit.git_object import GitObject
+from pit.index import Index
 
 
 class Database:
@@ -9,6 +10,7 @@ class Database:
         self.root_dir = Path(root_dir)
         self.git_dir = self.root_dir / ".git"
         self.objects_dir = self.git_dir / "objects"
+        self.index_path = self.git_dir / "index"
 
     def init(self):
         self.objects_dir.mkdir(parents=True, exist_ok=True)
@@ -19,3 +21,7 @@ class Database:
             return
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(zlib.compress(obj.saved))
+
+    def store_index(self, index: Index):
+        self.index_path.parent.mkdir(parents=True, exist_ok=True)
+        self.index_path.write_bytes(bytes(index))

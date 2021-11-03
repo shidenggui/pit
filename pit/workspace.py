@@ -1,10 +1,12 @@
 import os
 import time
 from pathlib import Path
+from typing import List
 
 from pit.constants import IGNORE
 from pit.database import Database
 from pit.git_object import Blob, Entry, Commit, Tree
+from pit.index import Index
 from pit.refs import Refs
 from pit.values import Author
 
@@ -21,7 +23,6 @@ class Workspace:
 
     @classmethod
     def commit(cls, *, author_name: str, author_email: str, commit_msg: str):
-
         cwd = os.getcwd()
         database = Database(cwd)
         refs = Refs(cwd)
@@ -61,3 +62,15 @@ class Workspace:
         )
         database.store(commit)
         refs.update_head(commit.oid)
+
+    @classmethod
+    def add(cls, files: List[str]):
+        if not files:
+            return
+        cwd = os.getcwd()
+
+        database = Database(cwd)
+        index = Index(cwd)
+        for file in files:
+            index.add_file(file)
+        database.store_index(index)

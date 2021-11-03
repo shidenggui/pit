@@ -28,6 +28,10 @@ def generate_parser():
     commit_cmd.set_defaults(cmd="commit")
     commit_cmd.add_argument('-m', help="commit message", default='')
 
+    add_cmd = subparsers.add_parser("add", help="add help")
+    add_cmd.set_defaults(cmd="add")
+    add_cmd.add_argument('files', nargs='+')
+
     return parser
 
 
@@ -43,6 +47,8 @@ def entrypoint():
             Workspace.commit(
                 author_name=author_name, author_email=author_email, commit_msg=commit_msg
             )
+        case "add":
+            Workspace.add(args.files)
         case _:
             pass
 
