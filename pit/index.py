@@ -181,7 +181,15 @@ class Index:
         return f"<Index(header={self.header}, entries={self.entries})>"
 
     def __bytes__(self):
-        data = b"%s%s" % (self.header, b"".join([b"%s" % e for e in self.entries]))
+        data = b"%s%s" % (
+            self.header,
+            b"".join(
+                [
+                    bytes(e)
+                    for e in sorted(self.entries.values(), key=lambda e: e.file_path)
+                ]
+            ),
+        )
         return b"%s%s" % (data, hashlib.sha1(data).digest())
 
     def add_file(self, file_path: Path | str):
@@ -190,18 +198,18 @@ class Index:
         if not file_path.exists():
             return
         new_entry = IndexEntry.from_file(file_path)
-        self.entries.append(new_entry)
-        self.entries.sort(key=lambda e: e.file_path)
+        self.entries[new_entry.file_path] = new_entry
         self.header.entries = len(self.entries)
 
     def _parse(self):
         raw = self.index_path.read_bytes() if self.index_path.exists() else b""
         header = IndexHeader.from_raw(raw)
-        entries = []
+        entries = {}
         scanned = 12
         for _ in range(header.entries):
-            entries.append(IndexEntry.from_raw(raw[scanned:]))
-            scanned += entries[-1].length
+            entry = IndexEntry.from_raw(raw[scanned:])
+            entries[entry.file_path] = entry
+            scanned += entry.length
 
         return header, entries
 
