@@ -136,6 +136,9 @@ class IndexEntry:
         :param file:
         :return:
         """
+        # TODO: when file_path is longer than 4096 bytes,
+        # the max value of the file_path_length should be set to 4096 bytes
+        # when restoring the overflowed file_path, we should use incremental scanning
         file_hash = bytes.fromhex(Blob(file.read_bytes()).oid)
         file_stat = file.stat()
         return IndexEntry(
@@ -186,7 +189,8 @@ class Index:
         file_path = Path(file_path).resolve().relative_to(self._root_dir.resolve())
         if not file_path.exists():
             return
-        self.entries.append(IndexEntry.from_file(file_path))
+        new_entry = IndexEntry.from_file(file_path)
+        self.entries.append(new_entry)
         self.entries.sort(key=lambda e: e.file_path)
         self.header.entries = len(self.entries)
 
