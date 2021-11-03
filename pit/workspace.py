@@ -64,13 +64,18 @@ class Workspace:
         refs.update_head(commit.oid)
 
     @classmethod
-    def add(cls, files: List[str]):
-        if not files:
+    def add(cls, paths: List[str]):
+        if not paths:
             return
         cwd = os.getcwd()
 
         database = Database(cwd)
         index = Index(cwd)
-        for file in files:
-            index.add_file(file)
+        for path in paths:
+            path = Path(path)
+            if path.is_dir():
+                for sub_path in path.glob('*'):
+                    index.add_file(sub_path)
+            else:
+                index.add_file(path)
         database.store_index(index)
