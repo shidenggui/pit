@@ -8,6 +8,7 @@ from pit.database import Database
 from pit.git_object import Blob, Tree, Entry, Commit
 from pit.refs import Refs
 from pit.values import Author
+from pit.workspace import Workspace
 
 
 def generate_parser():
@@ -34,56 +35,14 @@ def entrypoint():
     args = generate_parser().parse_args()
     match args.cmd:
         case "init":
-            cwd = os.getcwd()
-            database = Database(cwd)
-            refs = Refs(cwd)
-
-            database.init()
-            refs.init()
+            Workspace.init()
         case "commit":
             author_name = os.getenv("GIT_AUTHOR_NAME")
             author_email = os.getenv("GIT_AUTHOR_EMAIL")
             commit_msg = args.m
-
-            cwd = os.getcwd()
-            database = Database(cwd)
-            refs = Refs(cwd)
-
-            def walk_dir(root: Path, entries: list):
-                if root.name in IGNORE:
-                    return entries
-
-                if root.is_file():
-                    blob = Blob(content=root.read_bytes())
-                    database.store(blob)
-
-                    entries.append(Entry(oid=blob.oid, path=str(root)))
-                    return entries
-
-                sub_entries = []
-                for path in root.iterdir():
-                    walk_dir(path, sub_entries)
-                if sub_entries:
-                    tree = Tree(entries=sub_entries)
-                    database.store(tree)
-
-                    entries.append(Entry(oid=tree.oid, path=str(root)))
-                return entries
-
-            tree_entry = walk_dir(Path(cwd), [])[0]
-            commit = Commit(
-                tree_oid=tree_entry.oid,
-                author=Author(
-                    name=author_name,
-                    email=author_email,
-                    timestamp=int(time.time()),
-                    timezone="+0800",
-                ),
-                message=commit_msg,
-                parent_oid=refs.read_head()
+            Workspace.commit(
+                author_name=author_name, author_email=author_email, commit_msg=commit_msg
             )
-            database.store(commit)
-            refs.update_head(commit.oid)
         case _:
             pass
 
