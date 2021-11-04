@@ -9,25 +9,20 @@ from pit.database import Database
 from pit.git_object import TreeEntry, Commit, Tree
 from pit.index import Index, IndexEntry
 from pit.refs import Refs
+from pit.repository import Repository
 from pit.values import Author, GitFileMode
 
 
 class Workspace:
     @classmethod
     def init(cls):
-        cwd = os.getcwd()
-        database = Database(cwd)
-        refs = Refs(cwd)
-
-        database.init()
-        refs.init()
+        repo = Repository(os.getcwd())
+        repo.database.init()
+        repo.refs.init()
 
     @classmethod
     def commit(cls, *, author_name: str, author_email: str, commit_msg: str):
-        cwd = os.getcwd()
-        database = Database(cwd)
-        refs = Refs(cwd)
-        index = Index(cwd)
+        repo = Repository(os.getcwd())
 
         # construct_tree
         index_tree: dict[str, defaultdict | IndexEntry] = defaultdict(
@@ -42,7 +37,7 @@ class Workspace:
                 tree = tree[part]
             tree[path.name] = index_entry
 
-        for index_entry in index.entries.values():
+        for index_entry in repo.index.entries.values():
             construct_tree(index_entry)
 
         # save tree
@@ -58,7 +53,7 @@ class Workspace:
             sub_tree = Tree(entries=[])
             for part in root:
                 construct_tree_object(root[part], sub_tree, parents=[*parents, part])
-            database.store(sub_tree)
+            repo.database.store(sub_tree)
             tree.entries.append(
                 TreeEntry(
                     oid=sub_tree.oid,
@@ -78,10 +73,10 @@ class Workspace:
                 timezone="+0800",
             ),
             message=commit_msg,
-            parent_oid=refs.read_head(),
+            parent_oid=repo.refs.read_head(),
         )
-        database.store(commit)
-        refs.update_head(commit.oid)
+        repo.database.store(commit)
+        repo.refs.update_head(commit.oid)
 
     @classmethod
     def add(cls, paths: List[str]):
@@ -93,11 +88,7 @@ class Workspace:
                 print(f"fatal: pathspec '{path}' did not match any files")
                 return
 
-        cwd = os.getcwd()
-
-        database = Database(cwd)
-        index = Index(cwd)
-
+        repo = Repository(os.getcwd())
 
         for path in paths:
             path = Path(path)
@@ -106,10 +97,10 @@ class Workspace:
                     if any(str(sub_path).startswith(ignore) for ignore in IGNORE):
                         continue
                     if sub_path.is_file():
-                        blob = index.add_file(sub_path)
-                        database.store(blob)
+                        blob = repo.index.add_file(sub_path)
+                        repo.database.store(blob)
             else:
-                blob = index.add_file(path)
-                database.store(blob)
-        index.clean()
-        database.store_index(index)
+                blob = repo.index.add_file(path)
+                repo.database.store(blob)
+        repo.index.clean()
+        repo.database.store_index(repo.index)
