@@ -205,10 +205,8 @@ class Index:
     def add_file(self, file_path: Path | str) -> Blob:
         # if sub path try to format the sub path to the path relative to the root dir
         file_path = Path(file_path).resolve().relative_to(self._root_dir.resolve())
-        parent_dirs = {str(p) for p in file_path.parents}
-        for entry_file_path in list(self.entries):
-            if entry_file_path in parent_dirs:
-                self.entries.pop(entry_file_path)
+        for parent_dir in file_path.parents:
+            self.entries.pop(str(parent_dir), None)
 
         new_entry, blob = IndexEntry.from_file(file_path)
         self.entries[new_entry.file_path] = new_entry
