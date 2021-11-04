@@ -183,6 +183,7 @@ class Index:
         return f"<Index(header={self.header}, entries={self.entries})>"
 
     def __bytes__(self):
+        self.header.entries = len(self.entries)
         data = b"%s%s" % (
             self.header,
             b"".join(
@@ -219,6 +220,7 @@ class Index:
         for entry_file_path in list(self.entries):
             if not os.path.exists(entry_file_path):
                 self.entries.pop(entry_file_path)
+        self.header.entries = len(self.entries)
 
     def _parse(self):
         raw = self.index_path.read_bytes() if self.index_path.exists() else b""
