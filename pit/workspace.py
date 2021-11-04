@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from pit.constants import IGNORE
 from pit.database import Database
-from pit.git_object import Blob, TreeEntry, Commit, Tree
+from pit.git_object import TreeEntry, Commit, Tree
 from pit.index import Index, IndexEntry
 from pit.refs import Refs
 from pit.values import Author, GitFileMode
@@ -87,15 +87,20 @@ class Workspace:
     def add(cls, paths: List[str]):
         if not paths:
             return
+        for path in paths:
+            path = Path(path)
+            if not path.exists():
+                print(f"fatal: pathspec '{path}' did not match any files")
+                return
+
         cwd = os.getcwd()
 
         database = Database(cwd)
         index = Index(cwd)
+
+
         for path in paths:
             path = Path(path)
-            if not path.exists():
-                continue
-
             if path.is_dir():
                 for sub_path in path.rglob("*"):
                     if any(str(sub_path).startswith(ignore) for ignore in IGNORE):
