@@ -1,14 +1,15 @@
 import os
 import time
+from collections import defaultdict
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from pit.constants import IGNORE
 from pit.database import Database
-from pit.git_object import Blob, Entry, Commit, Tree
-from pit.index import Index
+from pit.git_object import Blob, TreeEntry, Commit, Tree
+from pit.index import Index, IndexEntry
 from pit.refs import Refs
-from pit.values import Author
+from pit.values import Author, GitFileMode
 
 
 class Workspace:
@@ -26,31 +27,50 @@ class Workspace:
         cwd = os.getcwd()
         database = Database(cwd)
         refs = Refs(cwd)
+        index = Index(cwd)
 
-        def walk_dir(root: Path, entries: list):
-            if root.name in IGNORE:
-                return entries
+        # construct_tree
+        index_tree: dict[str, defaultdict | IndexEntry] = defaultdict(
+            lambda: defaultdict(dict)
+        )
 
-            if root.is_file():
-                blob = Blob(content=root.read_bytes())
-                database.store(blob)
+        def construct_tree(index_entry: IndexEntry):
+            path = Path(index_entry.file_path)
 
-                entries.append(Entry(oid=blob.oid, path=str(root)))
-                return entries
+            tree = index_tree
+            for part in path.parent.parts:
+                tree = tree[part]
+            tree[path.name] = index_entry
 
-            sub_entries = []
-            for path in root.iterdir():
-                walk_dir(path, sub_entries)
-            if sub_entries:
-                tree = Tree(entries=sub_entries)
-                database.store(tree)
+        for index_entry in index.entries.values():
+            construct_tree(index_entry)
 
-                entries.append(Entry(oid=tree.oid, path=str(root)))
-            return entries
+        # save tree
+        def construct_tree_object(
+            root: dict[str, dict | IndexEntry],
+            tree: Optional[Tree],
+            parents: list[str],
+        ):
+            if isinstance(root, IndexEntry):
+                tree.entries.append(root.to_tree_entry())
+                return tree
 
-        tree_entry = walk_dir(Path(cwd), [])[0]
+            sub_tree = Tree(entries=[])
+            for part in root:
+                construct_tree_object(root[part], sub_tree, parents=[*parents, part])
+            database.store(sub_tree)
+            tree.entries.append(
+                TreeEntry(
+                    oid=sub_tree.oid,
+                    path=os.path.join(*parents),
+                    mode=GitFileMode.dir(),
+                )
+            )
+            return tree
+
+        tree = construct_tree_object(index_tree, Tree(entries=[]), parents=[""])
         commit = Commit(
-            tree_oid=tree_entry.oid,
+            tree_oid=tree.entries[0].oid,
             author=Author(
                 name=author_name,
                 email=author_email,
@@ -73,9 +93,17 @@ class Workspace:
         index = Index(cwd)
         for path in paths:
             path = Path(path)
+            if not path.exists():
+                continue
+
             if path.is_dir():
-                for sub_path in path.glob('*'):
-                    index.add_file(sub_path)
+                for sub_path in path.rglob("*"):
+                    if any(str(sub_path).startswith(ignore)for ignore in IGNORE):
+                        continue
+                    if sub_path.is_file():
+                        blob = index.add_file(sub_path)
+                        database.store(blob)
             else:
-                index.add_file(path)
+                blob = index.add_file(path)
+                database.store(blob)
         database.store_index(index)

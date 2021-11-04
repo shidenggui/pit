@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 import hashlib
 
-from pit.git_object import Blob
+from pit.git_object import Blob, TreeEntry
 from pit.values import GitFileMode
 
 
@@ -78,6 +78,9 @@ class IndexEntry:
     file_path_length: int
     file_path: str
 
+    def to_tree_entry(self) -> TreeEntry:
+        return TreeEntry(oid=self.file_hash.hex(), path=self.file_path, mode=self.mode)
+
     def __bytes__(self):
         return b"%s%s%s%s%s%s%s%s%s%s%s%s%s%s" % (
             self.ctime.to_bytes(4, "big"),
@@ -92,7 +95,7 @@ class IndexEntry:
             self.file_size.to_bytes(4, "big"),
             self.file_hash,
             self.file_path_length.to_bytes(2, "big"),
-            self.file_path.encode(),
+            self.file_path.encode() + b"\x00",
             b"\x00" * self.padding_zeros,
         )
 
@@ -116,7 +119,7 @@ class IndexEntry:
         )
 
     @classmethod
-    def from_file(cls, file: Path):
+    def from_file(cls, file: Path) -> ("IndexEntry", Blob):
         """
         os.stat_result(
             st_mode=33261,
@@ -135,35 +138,37 @@ class IndexEntry:
         # TODO: when file_path is longer than 4096 bytes,
         # the max value of the file_path_length should be set to 4096 bytes
         # when restoring the overflowed file_path, we should use incremental scanning
-        file_hash = bytes.fromhex(Blob(file.read_bytes()).oid)
+        blob = Blob(file.read_bytes())
+        file_hash = bytes.fromhex(blob.oid)
         file_stat = file.stat()
-        return IndexEntry(
-            ctime=int(file_stat.st_ctime),
-            ctime_ns=int(file_stat.st_ctime_ns - int(file_stat.st_ctime) * 10 ** 9),
-            mtime=int(file_stat.st_mtime),
-            mtime_ns=int(file_stat.st_mtime_ns - int(file_stat.st_mtime) * 10 ** 9),
-            dev=file_stat.st_dev,
-            ino=file_stat.st_ino,
-            mode=file_stat.st_mode,
-            uid=file_stat.st_uid,
-            gid=file_stat.st_gid,
-            file_size=file_stat.st_size,
-            file_hash=file_hash,
-            file_path_length=len(str(file)),
-            file_path=str(file),
+        return (
+            IndexEntry(
+                ctime=int(file_stat.st_ctime),
+                ctime_ns=int(file_stat.st_ctime_ns - int(file_stat.st_ctime) * 10 ** 9),
+                mtime=int(file_stat.st_mtime),
+                mtime_ns=int(file_stat.st_mtime_ns - int(file_stat.st_mtime) * 10 ** 9),
+                dev=file_stat.st_dev,
+                ino=file_stat.st_ino,
+                mode=file_stat.st_mode,
+                uid=file_stat.st_uid,
+                gid=file_stat.st_gid,
+                file_size=file_stat.st_size,
+                file_hash=file_hash,
+                file_path_length=len(str(file)),
+                file_path=str(file),
+            ),
+            blob,
         )
 
     @property
     def padding_zeros(self):
-        return (
-            8 - (62 + self.file_path_length) % 8
-            if (62 + self.file_path_length) % 8
-            else 0
-        )
+        # + 1 because file_path ends with '\x00'
+        entry_length = 62 + self.file_path_length + 1
+        return 8 - entry_length % 8 if entry_length % 8 else 0
 
     @property
     def length(self):
-        return 62 + self.file_path_length + self.padding_zeros
+        return len(bytes(self))
 
 
 class Index:
@@ -186,16 +191,28 @@ class Index:
                 ]
             ),
         )
-        return b"%s%s" % (data, hashlib.sha1(data).digest())
+        # data += b"\x00" * self.padding_zeros(data),
 
-    def add_file(self, file_path: Path | str):
+        return b"%s%s" % (
+            data,
+            hashlib.sha1(data).digest(),
+        )
+
+    def padding_zeros(self, data: bytes):
+        return 8 - len(data) % 8 if len(data) % 8 else 0
+
+    def add_file(self, file_path: Path | str) -> Blob:
         # if sub path try to format the sub path to the path relative to the root dir
         file_path = Path(file_path).resolve().relative_to(self._root_dir.resolve())
-        if not file_path.exists():
-            return
-        new_entry = IndexEntry.from_file(file_path)
+        parent_dirs = {str(p) for p in file_path.parents}
+        for entry_file_path in list(self.entries):
+            if entry_file_path in parent_dirs:
+                self.entries.pop(entry_file_path)
+
+        new_entry, blob = IndexEntry.from_file(file_path)
         self.entries[new_entry.file_path] = new_entry
         self.header.entries = len(self.entries)
+        return blob
 
     def _parse(self):
         raw = self.index_path.read_bytes() if self.index_path.exists() else b""

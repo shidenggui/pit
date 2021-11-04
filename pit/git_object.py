@@ -1,7 +1,6 @@
 import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Union
 
 from pit.values import GitFileMode, Author
 
@@ -49,17 +48,17 @@ class Commit(GitObject):
 
 
 @dataclass()
-class Entry:
+class TreeEntry:
     oid: str
     path: str
-    mode: bytes = field(init=False)
+    mode: int
     saved: bytes = field(init=False)
 
     def __post_init__(self):
         path = Path(self.path)
 
         self.saved = b"%s %s\x00%s" % (
-            GitFileMode(path.stat().st_mode),
+            GitFileMode(self.mode),
             path.name.encode(),
             bytes.fromhex(self.oid),
         )
@@ -67,17 +66,21 @@ class Entry:
 
 @dataclass()
 class Tree(GitObject):
-    entries: list[Union["Tree", Entry]]
+    entries: list["TreeEntry"]
 
     def __post_init__(self):
         self.type = "tree"
         self.entries = sorted(self.entries, key=lambda x: Path(x.path).name)
 
+    @property
+    def saved(self):
         contents = [entry.saved for entry in self.entries]
         content = b"".join(contents)
-        self.saved = b"tree %d\x00%s" % (len(content), content)
+        return b"tree %d\x00%s" % (len(content), content)
 
-        self.oid = hashlib.sha1(self.saved).hexdigest()
+    @property
+    def oid(self):
+        return hashlib.sha1(self.saved).hexdigest()
 
 
 if __name__ == "__main__":
@@ -87,7 +90,7 @@ if __name__ == "__main__":
     assert a_txt.saved == b"blob 6\x00hello\n"
 
     print("Test Tree")
-    a_tree = Tree(entries=[Entry(path="a.txt", oid=a_txt.oid)])
+    a_tree = Tree(entries=[TreeEntry(path="a.txt", oid=a_txt.oid)])
     print(a_tree)
     assert (
         a_tree.saved

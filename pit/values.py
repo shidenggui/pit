@@ -18,6 +18,10 @@ class GitFileMode:
         # if mode[3] == b"7":
         return b"100755"
 
+    @classmethod
+    def dir(cls) -> int:
+        return int(b"040000", 8)
+
 
 @dataclass(frozen=True)
 class Author:

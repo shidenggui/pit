@@ -1,13 +1,5 @@
 import argparse
 import os
-import time
-from pathlib import Path
-
-from pit.constants import IGNORE
-from pit.database import Database
-from pit.git_object import Blob, Tree, Entry, Commit
-from pit.refs import Refs
-from pit.values import Author
 from pit.workspace import Workspace
 
 
