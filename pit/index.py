@@ -5,6 +5,7 @@ import hashlib
 
 from pit.git_object import Blob, TreeEntry
 from pit.values import GitFileMode
+import os
 
 
 @dataclass
@@ -212,7 +213,14 @@ class Index:
         new_entry, blob = IndexEntry.from_file(file_path)
         self.entries[new_entry.file_path] = new_entry
         self.header.entries = len(self.entries)
+
         return blob
+
+    def clean(self):
+        """Clean deleted files"""
+        for entry_file_path in list(self.entries):
+            if not os.path.exists(entry_file_path):
+                self.entries.pop(entry_file_path)
 
     def _parse(self):
         raw = self.index_path.read_bytes() if self.index_path.exists() else b""

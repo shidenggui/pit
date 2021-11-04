@@ -98,7 +98,7 @@ class Workspace:
 
             if path.is_dir():
                 for sub_path in path.rglob("*"):
-                    if any(str(sub_path).startswith(ignore)for ignore in IGNORE):
+                    if any(str(sub_path).startswith(ignore) for ignore in IGNORE):
                         continue
                     if sub_path.is_file():
                         blob = index.add_file(sub_path)
@@ -106,4 +106,5 @@ class Workspace:
             else:
                 blob = index.add_file(path)
                 database.store(blob)
+        index.clean()
         database.store_index(index)
