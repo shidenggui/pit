@@ -1,6 +1,7 @@
 from functools import cached_property
 from pathlib import Path
 
+from pit.constants import IGNORE
 from pit.database import Database
 from pit.index import Index
 from pit.refs import Refs
@@ -24,7 +25,8 @@ class Repository:
 
     @cached_property
     def ignores(self) -> list[str]:
-        git_ignores = Path(self.root_dir) / ".gitignore"
-        if not git_ignores.exists():
+        ignore_file = Path(self.root_dir) / ".gitignore"
+        if not ignore_file.exists():
             return [".git"]
-        return [str(p).strip() for p in git_ignores.read_text().split("\n") if p]
+        git_ignores = {str(p).strip() for p in ignore_file.read_text().split("\n") if p}
+        return list(git_ignores | IGNORE)

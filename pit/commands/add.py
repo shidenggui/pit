@@ -8,7 +8,6 @@ class AddCommand(BaseCommand):
     def __init__(self, root_dir: str, *, paths: list[str]):
         super().__init__(root_dir)
         self.paths = paths
-        self.ignores = [*self.repo.ignores, *IGNORE]
 
     def run(self):
         if not self.paths:
@@ -35,4 +34,4 @@ class AddCommand(BaseCommand):
         self.repo.database.store_index(self.repo.index)
 
     def _should_ignore(self, path: Path):
-        return any(ignore in path.parts for ignore in self.ignores)
+        return any(ignore in path.parts for ignore in self.repo.ignores)
