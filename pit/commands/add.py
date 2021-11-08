@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pit.commands.base import BaseCommand
 from pit.constants import IGNORE
+from pit.git_object import Blob
 
 
 class AddCommand(BaseCommand):
@@ -25,11 +26,11 @@ class AddCommand(BaseCommand):
                     if self._should_ignore(sub_path):
                         continue
                     if sub_path.is_file():
-                        blob = self.repo.index.add_file(sub_path)
-                        self.repo.database.store(blob)
+                        self.repo.database.store(Blob(sub_path.read_bytes()))
+                        self.repo.index.add_file(sub_path)
             else:
-                blob = self.repo.index.add_file(path)
-                self.repo.database.store(blob)
+                self.repo.database.store(Blob(path.read_bytes()))
+                self.repo.index.add_file(path)
         self.repo.index.clean()
         self.repo.database.store_index(self.repo.index)
 

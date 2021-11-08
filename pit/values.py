@@ -1,5 +1,17 @@
-from dataclasses import dataclass
-from functools import cached_property
+from dataclasses import dataclass, InitVar
+from pathlib import Path
+
+
+@dataclass()
+class GitPath:
+    path: str | Path
+    root_dir: InitVar[str | Path]
+
+    def __post_init__(self, root_dir: str | Path):
+        self.path = Path(self.path).absolute().relative_to(Path(root_dir).absolute())
+
+    def __str__(self):
+        return f"{self.path if self.path.is_file() else f'{self.path}/'}"
 
 
 @dataclass(frozen=True)

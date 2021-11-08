@@ -5,7 +5,7 @@ from pathlib import Path
 import hashlib
 
 from pit.git_object import Blob, TreeEntry
-from pit.values import GitFileMode
+from pit.values import GitFileMode, GitPath
 import os
 
 
@@ -121,7 +121,7 @@ class IndexEntry:
         )
 
     @classmethod
-    def from_file(cls, file: Path) -> ("IndexEntry", Blob):
+    def from_file(cls, file: Path) -> "IndexEntry":
         """
         os.stat_result(
             st_mode=33261,
@@ -143,23 +143,20 @@ class IndexEntry:
         blob = Blob(file.read_bytes())
         file_hash = bytes.fromhex(blob.oid)
         file_stat = file.stat()
-        return (
-            IndexEntry(
-                ctime=int(file_stat.st_ctime),
-                ctime_ns=int(file_stat.st_ctime_ns - int(file_stat.st_ctime) * 10 ** 9),
-                mtime=int(file_stat.st_mtime),
-                mtime_ns=int(file_stat.st_mtime_ns - int(file_stat.st_mtime) * 10 ** 9),
-                dev=file_stat.st_dev,
-                ino=file_stat.st_ino,
-                mode=file_stat.st_mode,
-                uid=file_stat.st_uid,
-                gid=file_stat.st_gid,
-                file_size=file_stat.st_size,
-                file_hash=file_hash,
-                file_path_length=len(str(file)),
-                file_path=str(file),
-            ),
-            blob,
+        return IndexEntry(
+            ctime=int(file_stat.st_ctime),
+            ctime_ns=int(file_stat.st_ctime_ns - int(file_stat.st_ctime) * 10 ** 9),
+            mtime=int(file_stat.st_mtime),
+            mtime_ns=int(file_stat.st_mtime_ns - int(file_stat.st_mtime) * 10 ** 9),
+            dev=file_stat.st_dev,
+            ino=int.from_bytes(file_stat.st_ino.to_bytes(8, "big")[-4:], "big"),
+            mode=file_stat.st_mode,
+            uid=file_stat.st_uid,
+            gid=file_stat.st_gid,
+            file_size=file_stat.st_size,
+            file_hash=file_hash,
+            file_path_length=len(str(file)),
+            file_path=str(file),
         )
 
     @property
@@ -200,13 +197,18 @@ class Index:
             hashlib.sha1(data).digest(),
         )
 
-    def tracked(self, path: Path) -> bool:
+    def has_tracked(self, path: Path) -> bool:
         path = str(Path(path).resolve().relative_to(self._root_dir.resolve()))
         if path in self.entries:
             return True
         if path in self.parents:
             return True
         return False
+
+    def has_modified(self, path: Path) -> bool:
+        return IndexEntry.from_file(path) != self.entries.get(
+            str(GitPath(path, root_dir=self._root_dir))
+        )
 
     @property
     def parents(self):
@@ -216,17 +218,15 @@ class Index:
                 parents.add(str(p))
         return parents
 
-    def add_file(self, file_path: Path | str) -> Blob:
+    def add_file(self, file_path: Path | str):
         # if sub path try to format the sub path to the path relative to the root dir
         file_path = Path(file_path).resolve().relative_to(self._root_dir.resolve())
         for parent_dir in file_path.parents:
             self.entries.pop(str(parent_dir), None)
 
-        new_entry, blob = IndexEntry.from_file(file_path)
+        new_entry = IndexEntry.from_file(file_path)
         self.entries[new_entry.file_path] = new_entry
         self.header.entries = len(self.entries)
-
-        return blob
 
     def clean(self):
         """Clean deleted files"""
