@@ -15,6 +15,9 @@ class Database:
     def init(self):
         self.objects_dir.mkdir(parents=True, exist_ok=True)
 
+    def has_exists(self, object_id: str) -> bool:
+        return (self.objects_dir / object_id[:2] / object_id[2:]).exists()
+
     def store(self, obj: GitObject):
         path = self.objects_dir / obj.oid[:2] / obj.oid[2:]
         if path.exists():

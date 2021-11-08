@@ -1,6 +1,9 @@
 import argparse
 import os
-from pit.workspace import Workspace
+
+from pit.commands.add import AddCommand
+from pit.commands.commit import CommitCommand
+from pit.commands.init import InitCommand
 
 
 def generate_parser():
@@ -29,18 +32,17 @@ def generate_parser():
 
 def entrypoint():
     args = generate_parser().parse_args()
+    root_dir = os.getcwd()
     match args.cmd:
         case "init":
-            Workspace.init()
+            InitCommand(root_dir).run()
         case "commit":
-            author_name = os.getenv("GIT_AUTHOR_NAME")
-            author_email = os.getenv("GIT_AUTHOR_EMAIL")
-            commit_msg = args.m
-            Workspace.commit(
-                author_name=author_name, author_email=author_email, commit_msg=commit_msg
-            )
+            CommitCommand(root_dir,
+                          author_name=os.getenv("GIT_AUTHOR_NAME"),
+                          author_email=os.getenv("GIT_AUTHOR_EMAIL"),
+                          commit_msg=args.m).run()
         case "add":
-            Workspace.add(args.files)
+            AddCommand(root_dir, paths=args.files).run()
         case _:
             pass
 

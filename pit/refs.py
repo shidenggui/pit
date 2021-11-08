@@ -23,7 +23,7 @@ class Refs:
         return ref_head
 
     def read_head(self) -> str | None:
-        return self._ref_head().read_text() if self._ref_head().exists() else None
+        return self._ref_head().read_text().strip() if self._ref_head().exists() else None
 
 
 if __name__ == "__main__":

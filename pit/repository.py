@@ -1,4 +1,5 @@
 from functools import cached_property
+from pathlib import Path
 
 from pit.database import Database
 from pit.index import Index
@@ -20,3 +21,11 @@ class Repository:
     @cached_property
     def refs(self):
         return Refs(self.work_dir)
+
+    @cached_property
+    def ignores(self) -> list[str]:
+        return [
+            str(p).strip()
+            for p in (Path(self.work_dir) / ".gitignore").read_text().split("\n")
+            if p
+        ]
