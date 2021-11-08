@@ -4,6 +4,7 @@ import os
 from pit.commands.add import AddCommand
 from pit.commands.commit import CommitCommand
 from pit.commands.init import InitCommand
+from pit.commands.status import StatusCommand
 
 
 def generate_parser():
@@ -27,6 +28,10 @@ def generate_parser():
     add_cmd.set_defaults(cmd="add")
     add_cmd.add_argument('files', nargs='+')
 
+    status_cmd = subparsers.add_parser("status", help="status help")
+    status_cmd.set_defaults(cmd="status")
+    status_cmd.add_argument('--porcelain', action="store_true")
+
     return parser
 
 
@@ -43,6 +48,8 @@ def entrypoint():
                           commit_msg=args.m).run()
         case "add":
             AddCommand(root_dir, paths=args.files).run()
+        case "status":
+            StatusCommand(root_dir, porcelain=args.porcelain).run()
         case _:
             pass
 

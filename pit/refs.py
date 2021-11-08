@@ -2,8 +2,8 @@ from pathlib import Path
 
 
 class Refs:
-    def __init__(self, root_dir: str | Path):
-        self.root_dir = Path(root_dir)
+    def __init__(self, root_dir: Path):
+        self.root_dir = root_dir
         self.git_dir = self.root_dir / ".git"
         self.refs_dir = self.git_dir / "refs"
         self.head = self.git_dir / "HEAD"

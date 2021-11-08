@@ -6,8 +6,8 @@ from pit.index import Index
 
 
 class Database:
-    def __init__(self, root_dir: str):
-        self.root_dir = Path(root_dir)
+    def __init__(self, root_dir: Path):
+        self.root_dir = root_dir
         self.git_dir = self.root_dir / ".git"
         self.objects_dir = self.git_dir / "objects"
         self.index_path = self.git_dir / "index"

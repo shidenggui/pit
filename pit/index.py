@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import re
+from itertools import chain
 from pathlib import Path
 import hashlib
 
@@ -173,8 +174,8 @@ class IndexEntry:
 
 
 class Index:
-    def __init__(self, root_dir: str):
-        self._root_dir = Path(root_dir)
+    def __init__(self, root_dir: Path):
+        self._root_dir = root_dir
         self._git_dir = self._root_dir / ".git"
         self.index_path = self._git_dir / "index"
         self.header, self.entries = self._parse()
@@ -193,15 +194,27 @@ class Index:
                 ]
             ),
         )
-        # data += b"\x00" * self.padding_zeros(data),
 
         return b"%s%s" % (
             data,
             hashlib.sha1(data).digest(),
         )
 
-    def padding_zeros(self, data: bytes):
-        return 8 - len(data) % 8 if len(data) % 8 else 0
+    def tracked(self, path: Path) -> bool:
+        path = str(Path(path).resolve().relative_to(self._root_dir.resolve()))
+        if path in self.entries:
+            return True
+        if path in self.parents:
+            return True
+        return False
+
+    @property
+    def parents(self):
+        parents = set()
+        for path in self.entries:
+            for p in Path(path).parents:
+                parents.add(str(p))
+        return parents
 
     def add_file(self, file_path: Path | str) -> Blob:
         # if sub path try to format the sub path to the path relative to the root dir
