@@ -1,8 +1,27 @@
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from pit.commands.base import BaseCommand
 from pit.constants import IGNORE
 from pit.values import GitPath
+
+
+@dataclass()
+class FileStatusGroup:
+    root_dir: Path
+    modified: set[str] = field(default_factory=set)
+    added: set[str] = field(default_factory=set)
+    deleted: set[str] = field(default_factory=set)
+
+    def porcelain(self) -> str:
+        lines = []
+        for path in sorted(self.deleted):
+            lines.append(f" D {GitPath(path, root_dir=self.root_dir)}")
+        for path in sorted(self.modified):
+            lines.append(f" M {GitPath(path, root_dir=self.root_dir)}")
+        for path in sorted(self.added):
+            lines.append(f"?? {GitPath(path, root_dir=self.root_dir)}")
+        return "\n".join(lines)
 
 
 class StatusCommand(BaseCommand):
@@ -12,34 +31,35 @@ class StatusCommand(BaseCommand):
         self.porcelain = porcelain
 
     def run(self):
-        added = set()
-        modified = set()
+        status = FileStatusGroup(root_dir=self.root_dir)
+        existed_files = set()
         for path in self.repo.root_dir.rglob("*"):
             path = path.relative_to(self.repo.root_dir)
+            existed_files.add(str(path))
             if self._should_ignore(path):
                 continue
             if path.is_dir():
                 continue
             if self.repo.index.has_tracked(path):
                 if self.repo.index.has_modified(path):
-                    modified.add(str(path))
+                    status.modified.add(str(path))
                 continue
 
             if len(path.parts) == 1:
-                added.add(str(path))
+                status.added.add(str(path))
             else:
                 for parent in reversed(path.parents[:-1]):
-                    if str(parent) in added:
+                    if str(parent) in status.added:
                         break
                     if not self.repo.index.has_tracked(parent):
-                        added.add(str(parent))
+                        status.added.add(str(parent))
                         break
                 else:
-                    added.add(str(path))
-        for path in sorted(modified):
-            print(f" M {GitPath(path, root_dir=self.root_dir)}")
-        for path in sorted(added):
-            print(f"?? {GitPath(path, root_dir=self.root_dir)}")
+                    status.added.add(str(path))
+        for index_file in self.repo.index.entries:
+            if index_file not in existed_files:
+                status.deleted.add(index_file)
+        print(status.porcelain())
 
     def _should_ignore(self, path: Path):
         return any(ignore in path.parts for ignore in self.ignores)
