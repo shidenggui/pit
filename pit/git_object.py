@@ -48,6 +48,45 @@ class Commit(GitObject):
         content = b"\n".join(contents)
         return b"commit %d\x00%s" % (len(content), content)
 
+    @classmethod
+    def from_raw(cls, raw: bytes):
+        """
+        In [3]: c.split(b'\n')
+        Out[3]:
+        [b'commit 231\x00tree 798e9d13e6a2b6fcccf20ffb345222462fd4e891',
+         b'parent 246c46f09964b12c95aaf73f21a69af0d670e019',
+         b'author shidenggui <longlyshidenggui@gmail.com> 1636459276 +0800',
+         b'committer shidenggui <longlyshidenggui@gmail.com> 1636459276 +0800',
+         b'',
+         b'init',
+         b'']
+        :param raw:
+        :return:
+        """
+        lines = raw.split(b"\n")
+        _, tree_info = lines[0].split(b"\x00")
+        tree_oid = tree_info[5:].decode()
+        parent_oid = lines[1][7:].decode() if lines[1].startswith(b"parent") else None
+
+        line_no = 2 if parent_oid else 1
+        _, author_name, author_email, timestamp, timezone = lines[line_no].split(b" ")
+
+        # remove <> around '<longlyshidenggui@gmail.com>'
+        author_email = author_email[1:-1]
+        line_no += 3
+        commit_msg = b"\n".join(lines[line_no:-1]).decode()
+        return Commit(
+            tree_oid=tree_oid,
+            author=AuthorSign(
+                name=author_name.decode(),
+                email=author_email.decode(),
+                timestamp=int(timestamp),
+                timezone=timezone.decode(),
+            ),
+            message=commit_msg,
+            parent_oid=parent_oid,
+        )
+
 
 @dataclass()
 class TreeEntry:
@@ -88,7 +127,9 @@ if __name__ == "__main__":
     assert bytes(a_txt) == b"blob 6\x00hello\n"
 
     print("Test Tree")
-    a_tree = Tree(entries=[TreeEntry(path="a.txt", oid=a_txt.oid, mode=int(b'100644', 8))])
+    a_tree = Tree(
+        entries=[TreeEntry(path="a.txt", oid=a_txt.oid, mode=int(b"100644", 8))]
+    )
     print(a_tree)
     assert (
         bytes(a_tree)
@@ -107,7 +148,22 @@ if __name__ == "__main__":
         message="add a.txt",
     )
     print(a_commit)
-    assert (
-        bytes(a_commit)
-        == b"commit 188\x00tree 2e81171448eb9f2ee3821e3d447aa6b2fe3ddba1\nauthor shidenggui <longlyshidenggui@gmail.com> 1635305754 +0800\ncommitter shidenggui <longlyshidenggui@gmail.com> 1635305754 +0800\n\nadd a.txt\n"
-    ), bytes(a_tree)
+    expected_commit = b"commit 188\x00tree 2e81171448eb9f2ee3821e3d447aa6b2fe3ddba1\nauthor shidenggui <longlyshidenggui@gmail.com> 1635305754 +0800\ncommitter shidenggui <longlyshidenggui@gmail.com> 1635305754 +0800\n\nadd a.txt\n"
+    assert bytes(a_commit) == expected_commit, bytes(a_tree)
+    assert Commit.from_raw(expected_commit) == a_commit, Commit.from_raw(
+        expected_commit
+    )
+
+    # with parent
+    expected_commit = b"commit 231\x00tree 798e9d13e6a2b6fcccf20ffb345222462fd4e891\nparent 246c46f09964b12c95aaf73f21a69af0d670e019\nauthor shidenggui <longlyshidenggui@gmail.com> 1636459276 +0800\ncommitter shidenggui <longlyshidenggui@gmail.com> 1636459276 +0800\n\ninit\n"
+    assert Commit.from_raw(expected_commit) == Commit(
+        tree_oid="798e9d13e6a2b6fcccf20ffb345222462fd4e891",
+        author=AuthorSign(
+            name="shidenggui",
+            email="longlyshidenggui@gmail.com",
+            timestamp=1636459276,
+            timezone="+0800",
+        ),
+        message="init",
+        parent_oid="246c46f09964b12c95aaf73f21a69af0d670e019",
+    ), Commit.from_raw(expected_commit)
