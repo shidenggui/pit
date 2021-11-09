@@ -23,7 +23,7 @@ class Database:
         if path.exists():
             return
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(zlib.compress(obj.saved))
+        path.write_bytes(zlib.compress(bytes(obj)))
 
     def store_index(self, index: Index):
         self.index_path.parent.mkdir(parents=True, exist_ok=True)

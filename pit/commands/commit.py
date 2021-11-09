@@ -6,7 +6,7 @@ from pathlib import Path
 from pit.commands.base import BaseCommand
 from pit.git_object import Tree, TreeEntry, Commit
 from pit.index import IndexEntry
-from pit.values import GitFileMode, Author
+from pit.values import GitFileMode, AuthorSign
 
 
 class CommitCommand(BaseCommand):
@@ -72,7 +72,7 @@ class CommitCommand(BaseCommand):
 
         commit = Commit(
             tree_oid=tree_oid,
-            author=Author(
+            author=AuthorSign(
                 name=self.author_name,
                 email=self.author_email,
                 timestamp=int(time.time()),

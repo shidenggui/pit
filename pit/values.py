@@ -36,7 +36,7 @@ class GitFileMode:
 
 
 @dataclass(frozen=True)
-class Author:
+class AuthorSign:
     name: str
     email: str
     timestamp: int
