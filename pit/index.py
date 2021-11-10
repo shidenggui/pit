@@ -228,6 +228,12 @@ class Index:
         self.entries[new_entry.file_path] = new_entry
         self.header.entries = len(self.entries)
 
+    def remove_file(self, file_path: Path | str):
+        # if sub path try to format the sub path to the path relative to the root dir
+        git_path = GitPath(file_path, self._root_dir)
+        self.entries.pop(str(git_path), None)
+        self.header.entries = len(self.entries)
+
     def clean(self):
         """Clean deleted files"""
         for entry_file_path in list(self.entries):
