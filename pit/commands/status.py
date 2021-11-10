@@ -29,9 +29,45 @@ class FileStatusGroup:
             | self.index_added
         ):
             git_path = GitPath(path, root_dir=self.root_dir)
-            lines.append(f"{self._status_code(str(git_path.path))} {git_path}")
-        lines.sort(key=lambda x: 'zzzzz' if x[:2] == '??' else x[3:])
+            lines.append(f"{self._status_code(path)} {git_path}")
+        lines.sort(key=lambda x: "zz" if x[:2] == "??" else x[3:])
         return "\n".join(lines)
+
+    def long_format(self) -> str:
+        lines = []
+        if self.index_added or self.index_modified or self.index_deleted:
+            lines.append("Changes to be committed:")
+            lines.append('  (use "git restore --staged <file>..." to unstage)')
+            for path in sorted(self.index_deleted | self.index_modified | self.index_added):
+                git_path = GitPath(path, root_dir=self.root_dir)
+                lines.append(f"\t\x1b[7;30;42m{self._status_txt(path)}   {git_path}\x1b[0m")
+
+        if self.workspace_deleted or self.workspace_modified:
+            lines.append("\nChanges not staged for commit:")
+            lines.append('  (use "git add/rm <file>..." to update what will be committed)')
+            lines.append(
+                '  (use "git restore <file>..." to discard changes in working directory)'
+            )
+            for path in sorted(self.workspace_deleted | self.workspace_modified):
+                git_path = GitPath(path, root_dir=self.root_dir)
+                lines.append(f"\t\x1b[0;31;40m{self._status_txt(path)}   {git_path}\x1b[0m")
+
+        if self.workspace_added:
+            lines.append("\nUntracked files:")
+            lines.append('  (use "git add <file>..." to include in what will be committed)')
+            for path in sorted(self.workspace_added):
+                git_path = GitPath(path, root_dir=self.root_dir)
+                lines.append(f"\t\x1b[0;31;40m{git_path}\x1b[0m")
+        return ''.join(["\n".join(lines), "\n"])
+
+    def _status_txt(self, file_path: str):
+        if file_path in self.workspace_added or file_path in self.index_added:
+            return "new file:"
+        if file_path in self.workspace_modified or file_path in self.index_modified:
+            return "modified:"
+        if file_path in self.workspace_deleted or file_path in self.index_deleted:
+            return "deleted: "
+        raise NotImplementedError
 
     def _status_code(self, file_path: str):
         codes = [" ", " "]
@@ -127,7 +163,7 @@ class StatusCommand(BaseCommand):
             if entry_path not in self.repo.index.entries:
                 status.index_deleted.add(entry_path)
 
-        print(status.porcelain())
+        print(status.porcelain() if self.porcelain else status.long_format())
 
     def _should_ignore(self, path: Path):
         return any(ignore in path.parts for ignore in self.repo.ignores)
