@@ -10,6 +10,12 @@ class GitObject:
     type: str = field(init=False)
     oid: str = field(init=False)
 
+    def __bytes__(self):
+        raise NotImplementedError
+
+    def from_raw(self, raw: bytes) -> "GitObject":
+        raise NotImplementedError
+
 
 @dataclass()
 class Blob(GitObject):
@@ -18,6 +24,10 @@ class Blob(GitObject):
     def __post_init__(self):
         self.type = "blob"
         self.oid = hashlib.sha1(bytes(self)).hexdigest()
+
+    @classmethod
+    def from_raw(cls, raw: bytes) -> "Blob":
+        return Blob(raw)
 
     def __bytes__(self):
         return b"%s %d\x00%s" % (
@@ -49,7 +59,7 @@ class Commit(GitObject):
         return b"commit %d\x00%s" % (len(content), content)
 
     @classmethod
-    def from_raw(cls, raw: bytes):
+    def from_raw(cls, raw: bytes) -> "Commit":
         """
         In [3]: c.split(b'\n')
         Out[3]:
@@ -101,6 +111,15 @@ class TreeEntry:
             bytes.fromhex(self.oid),
         )
 
+    @classmethod
+    def from_raw(cls, raw: bytes) -> "TreeEntry":
+        mode = GitFileMode.from_raw(raw[:6]).mode
+
+        file_path_end = raw[7:].find(b"\x00") + 7
+        file_path = raw[7:file_path_end]
+        oid = raw[file_path_end + 1 : file_path_end + 21]
+        return TreeEntry(oid=oid.hex(), path=file_path.decode(), mode=mode)
+
 
 @dataclass()
 class Tree(GitObject):
@@ -113,6 +132,17 @@ class Tree(GitObject):
     @property
     def oid(self):
         return hashlib.sha1(bytes(self)).hexdigest()
+
+    @classmethod
+    def from_raw(cls, raw: bytes) -> "Tree":
+        head, entries_info = raw.split(b"\x00", 1)
+        entries = []
+        start = len(head) + 1
+        while start < len(raw):
+            entry = TreeEntry.from_raw(raw[start:])
+            entries.append(entry)
+            start += len(bytes(entry))
+        return Tree(entries=entries)
 
     def __bytes__(self):
         contents = [bytes(entry) for entry in self.entries]
@@ -167,3 +197,24 @@ if __name__ == "__main__":
         message="init",
         parent_oid="246c46f09964b12c95aaf73f21a69af0d670e019",
     ), Commit.from_raw(expected_commit)
+
+    print("Parse tree")
+    tree_raw = b'tree 128\x00040000 a\x00\xe9\x11P\x95\xc46];\xe6l\xbeH\xaf\x1d\x1d3\xb3\x1cWi100644 hello.txt\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91100644 ttt\x00ax\x07\x98"\x8d\x17\xaf-4\xfc\xe4\xcf\xbd\xf3UV\x83$r100644 txt\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91'
+    assert Tree.from_raw(tree_raw) == Tree(
+        entries=[
+            TreeEntry(
+                oid="00e9115095c4365d3be66cbe48af1d1d33b31c57", path="a", mode=16384
+            ),
+            TreeEntry(
+                oid="00e69de29bb2d1d6434b8b29ae775ad8c2e48c53",
+                path="hello.txt",
+                mode=33188,
+            ),
+            TreeEntry(
+                oid="0061780798228d17af2d34fce4cfbdf355568324", path="ttt", mode=33188
+            ),
+            TreeEntry(
+                oid="00e69de29bb2d1d6434b8b29ae775ad8c2e48c53", path="txt", mode=33188
+            ),
+        ],
+    ), Tree.from_raw(tree_raw)

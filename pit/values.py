@@ -30,6 +30,16 @@ class GitFileMode:
         # if mode[3] == b"7":
         return b"100755"
 
+    def is_dir(self) -> bool:
+        return bytes(self) == b"040000"
+
+    def is_file(self) -> bool:
+        return not self.is_dir()
+
+    @classmethod
+    def from_raw(cls, raw: bytes) -> "GitFileMode":
+        return GitFileMode(int(raw, 8))
+
     @classmethod
     def dir(cls) -> int:
         return int(b"040000", 8)

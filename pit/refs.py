@@ -15,7 +15,7 @@ class Refs:
     def update_head(self, oid: str):
         self._ref_head().write_text(oid)
 
-    def _ref_head(self):
+    def _ref_head(self) -> Path:
         ref = self.head.read_text().strip()
         ref_head = self.git_dir / ref[5:]
         if not ref_head.exists():

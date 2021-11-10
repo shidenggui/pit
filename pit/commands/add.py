@@ -31,7 +31,7 @@ class AddCommand(BaseCommand):
             else:
                 self.repo.database.store(Blob(path.read_bytes()))
                 self.repo.index.add_file(path)
-        self.repo.index.clean()
+        # self.repo.index.clean()
         self.repo.database.store_index(self.repo.index)
 
     def _should_ignore(self, path: Path):
