@@ -27,7 +27,7 @@ class Blob(GitObject):
 
     @classmethod
     def from_raw(cls, raw: bytes) -> "Blob":
-        return Blob(raw)
+        return Blob(raw.split(b"\x00", 1)[1])
 
     def __bytes__(self):
         return b"%s %d\x00%s" % (
@@ -113,10 +113,11 @@ class TreeEntry:
 
     @classmethod
     def from_raw(cls, raw: bytes) -> "TreeEntry":
-        mode = GitFileMode.from_raw(raw[:6]).mode
+        mode_len = 5 if raw.startswith(b"4") else 6
+        mode = GitFileMode.from_raw(raw[:mode_len]).mode
 
-        file_path_end = raw[7:].find(b"\x00") + 7
-        file_path = raw[7:file_path_end]
+        file_path_end = raw[mode_len + 1 :].find(b"\x00") + mode_len + 1
+        file_path = raw[mode_len + 1 : file_path_end]
         oid = raw[file_path_end + 1 : file_path_end + 21]
         return TreeEntry(oid=oid.hex(), path=file_path.decode(), mode=mode)
 
@@ -199,7 +200,7 @@ if __name__ == "__main__":
     ), Commit.from_raw(expected_commit)
 
     print("Parse tree")
-    tree_raw = b'tree 128\x00040000 a\x00\xe9\x11P\x95\xc46];\xe6l\xbeH\xaf\x1d\x1d3\xb3\x1cWi100644 hello.txt\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91100644 ttt\x00ax\x07\x98"\x8d\x17\xaf-4\xfc\xe4\xcf\xbd\xf3UV\x83$r100644 txt\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91'
+    tree_raw = b'tree 128\x0040000 a\x00\xe9\x11P\x95\xc46];\xe6l\xbeH\xaf\x1d\x1d3\xb3\x1cWi100644 hello.txt\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91100644 ttt\x00ax\x07\x98"\x8d\x17\xaf-4\xfc\xe4\xcf\xbd\xf3UV\x83$r100644 txt\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91'
     assert Tree.from_raw(tree_raw) == Tree(
         entries=[
             TreeEntry(

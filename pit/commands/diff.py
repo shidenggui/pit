@@ -3,6 +3,8 @@ from pathlib import Path
 
 from pit.commands.base import BaseCommand
 from pit.constants import Color
+from pit.database import Database
+from pit.diff import Diff
 from pit.git_object import TreeEntry
 from pit.index import IndexEntry
 from pit.values import ObjectId, GitFileMode
@@ -10,31 +12,47 @@ from pit.values import ObjectId, GitFileMode
 
 @dataclass()
 class DiffEntry:
+    DELETED_PATH = "/dev/null"
+    DELETED_OID = "0" * 40
     file_path: str
     mode: str
     oid: str
+    data: bytes
 
     @classmethod
-    def from_index_entry(cls, index_entry: IndexEntry) -> "DiffEntry":
+    def from_index_entry(
+        cls, index_entry: IndexEntry, database: Database
+    ) -> "DiffEntry":
+        # noinspection PyUnresolvedReferences
+        data = (
+            database.load(index_entry.oid).content
+            if database.has_exists(index_entry.oid)
+            else Path(index_entry.file_path).read_bytes()
+        )
         return DiffEntry(
             file_path=index_entry.file_path,
             mode=bytes(GitFileMode(index_entry.mode)).decode(),
             oid=index_entry.oid,
+            data=data,
         )
 
     @classmethod
-    def from_tree_entry(cls, tree_entry: TreeEntry) -> "DiffEntry":
+    def from_tree_entry(cls, tree_entry: TreeEntry, database: Database) -> "DiffEntry":
+        # noinspection PyUnresolvedReferences
         return DiffEntry(
             file_path=tree_entry.path,
             mode=bytes(GitFileMode(tree_entry.mode)).decode(),
             oid=tree_entry.oid,
+            data=database.load(tree_entry.oid).content,
         )
 
     @classmethod
     def from_deleted(
         cls,
     ) -> "DiffEntry":
-        return DiffEntry(file_path="/dev/null", mode="", oid="0000000")
+        return DiffEntry(
+            file_path=cls.DELETED_PATH, mode="", oid=cls.DELETED_OID, data=b""
+        )
 
     @property
     def short_oid(self) -> str:
@@ -42,7 +60,7 @@ class DiffEntry:
 
     @property
     def exists(self):
-        return self.file_path != "/dev/null"
+        return self.file_path != self.DELETED_PATH
 
 
 @dataclass
@@ -76,6 +94,10 @@ class DiffHeader:
         print(
             f"+++ {'b/' if self.b_file.exists else ''}{self.b_file.file_path}{Color.RESET_ALL}"
         )
+        for edit in Diff(
+            self.a_file.data.split(b"\n"), self.b_file.data.split(b"\n")
+        ).diff():
+            print(edit)
 
 
 class DiffCommand(BaseCommand):
@@ -107,10 +129,10 @@ class DiffCommand(BaseCommand):
             )
 
             DiffHeader(
-                a_file=DiffEntry.from_tree_entry(head_entry)
+                a_file=DiffEntry.from_tree_entry(head_entry, self.repo.database)
                 if head_entry
                 else DiffEntry.from_deleted(),
-                b_file=DiffEntry.from_index_entry(index_entry)
+                b_file=DiffEntry.from_index_entry(index_entry, self.repo.database)
                 if index_entry
                 else DiffEntry.from_deleted(),
             ).display_index_workspace_diff()
@@ -127,8 +149,8 @@ class DiffCommand(BaseCommand):
             )
 
             DiffHeader(
-                a_file=DiffEntry.from_index_entry(index_entry),
-                b_file=DiffEntry.from_index_entry(workspace_entry)
+                a_file=DiffEntry.from_index_entry(index_entry, self.repo.database),
+                b_file=DiffEntry.from_index_entry(workspace_entry, self.repo.database)
                 if workspace_entry
                 else DiffEntry.from_deleted(),
             ).display_index_workspace_diff()

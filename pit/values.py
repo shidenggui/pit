@@ -23,7 +23,7 @@ class GitFileMode:
         mode = "{0:o}".format(self.mode)
 
         if mode.startswith("4"):
-            return b"040000"
+            return b"40000"
 
         if mode[3] == "6":
             return b"100644"
@@ -32,7 +32,7 @@ class GitFileMode:
         return b"100755"
 
     def is_dir(self) -> bool:
-        return bytes(self) == b"040000"
+        return bytes(self) == b"40000"
 
     def is_file(self) -> bool:
         return not self.is_dir()
@@ -43,7 +43,7 @@ class GitFileMode:
 
     @classmethod
     def dir(cls) -> int:
-        return int(b"040000", 8)
+        return int(b"40000", 8)
 
 
 @dataclass(frozen=True)

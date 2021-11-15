@@ -17,11 +17,8 @@ class ObjectPath:
     def path(self) -> Path:
         return self.root_dir / ".git/objects" / self.oid[:2] / self.oid[2:]
 
-    def raw(self) -> bytes:
-        return zlib.decompress(self.path.read_bytes())
-
     def load(self) -> GitObject:
-        raw = self.raw()
+        raw = zlib.decompress(self.path.read_bytes())
         match raw.split(b' ')[0]:
             case b'tree':
                 return Tree.from_raw(raw)

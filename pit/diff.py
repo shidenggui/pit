@@ -1,17 +1,24 @@
 from dataclasses import dataclass
 
+from pit.constants import Color
+
 
 @dataclass
 class Edit:
+    TYPE_COLORS = {
+        '-': Color.RED,
+        '+': Color.GREEN,
+        ' ': ''
+    }
     type: str
-    text: str
+    text: str | bytes
 
     def __str__(self):
-        return f"{self.type} {self.text}"
+        return f"{self.TYPE_COLORS[self.type]}{self.type} {self.text if isinstance(self.text, str) else self.text.decode()}{Color.RESET_ALL}"
 
 
 class Diff:
-    def __init__(self, a: str | list[str], b: str | list[str]):
+    def __init__(self, a: str | bytes | list, b: str | bytes | list):
         self.a = a
         self.b = b
 
