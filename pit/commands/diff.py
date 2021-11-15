@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -6,6 +9,7 @@ from pit.constants import Color
 from pit.database import Database
 from pit.diff import Diff
 from pit.git_object import TreeEntry
+from pit.hunk import Hunk
 from pit.index import IndexEntry
 from pit.values import ObjectId, GitFileMode
 
@@ -68,34 +72,38 @@ class DiffHeader:
     a_file: DiffEntry
     b_file: DiffEntry
 
-    def display_index_workspace_diff(self):
+    def display(self):
         a_file_path = (
             self.a_file.file_path if self.a_file.exists else self.b_file.file_path
         )
         b_file_path = (
             self.b_file.file_path if self.b_file.exists else self.a_file.file_path
         )
-        print(f"{Color.WHITE}{Color.BOLD}diff --git a/{a_file_path} b/{b_file_path}")
+
+        color_prefix = f'{Color.WHITE}{Color.BOLD}'
+        print(f"{color_prefix}diff --git a/{a_file_path} b/{b_file_path}")
         # only mode changed
         if self.a_file.oid == self.b_file.oid and self.a_file.mode != self.b_file.mode:
-            print("old mode: ", self.a_file.mode)
-            print("new mode: ", self.b_file.mode)
+            print(f"{color_prefix}old mode: ", self.a_file.mode)
+            print(f"{color_prefix}new mode: ", self.b_file.mode, Color.RESET_ALL)
             return
 
         if not self.a_file.exists:
-            print("new file mode", self.b_file.mode)
+            print(f"{color_prefix}new file mode", self.b_file.mode)
         elif not self.b_file.exists:
-            print("deleted file mode", self.a_file.mode)
+            print(f"{color_prefix}deleted file mode", self.a_file.mode)
 
         print(
-            f"index {self.a_file.short_oid}..{self.b_file.short_oid} {self.a_file.mode if self.b_file.exists else ''}"
+            f"{color_prefix}index {self.a_file.short_oid}..{self.b_file.short_oid} {self.a_file.mode if self.b_file.exists else ''}"
         )
-        print(f"--- {'a/' if self.a_file.exists else ''}{self.a_file.file_path}")
+        print(f"{color_prefix}--- {'a/' if self.a_file.exists else ''}{self.a_file.file_path}")
         print(
-            f"+++ {'b/' if self.b_file.exists else ''}{self.b_file.file_path}{Color.RESET_ALL}"
+            f"{color_prefix}+++ {'b/' if self.b_file.exists else ''}{self.b_file.file_path}{Color.RESET_ALL}"
         )
-        for edit in Diff.from_lines(self.a_file.data, self.b_file.data).diff():
-            print(edit)
+        for hunk in Hunk.filters(Diff.from_lines(self.a_file.data, self.b_file.data).diff()):
+            print(hunk.header())
+            for edit in hunk.edits:
+                print(edit)
 
 
 class DiffCommand(BaseCommand):
@@ -133,7 +141,7 @@ class DiffCommand(BaseCommand):
                 b_file=DiffEntry.from_index_entry(index_entry, self.repo.database)
                 if index_entry
                 else DiffEntry.from_deleted(),
-            ).display_index_workspace_diff()
+            ).display()
 
     def _diff_index_workspace(self):
         for file_path in sorted(
@@ -151,4 +159,4 @@ class DiffCommand(BaseCommand):
                 b_file=DiffEntry.from_index_entry(workspace_entry, self.repo.database)
                 if workspace_entry
                 else DiffEntry.from_deleted(),
-            ).display_index_workspace_diff()
+            ).display()

@@ -1,11 +1,14 @@
 import argparse
 import os
+import subprocess
+import sys
 
 from pit.commands.add import AddCommand
 from pit.commands.commit import CommitCommand
 from pit.commands.diff import DiffCommand
 from pit.commands.init import InitCommand
 from pit.commands.status import StatusCommand
+from pit.pager import pager
 
 
 def generate_parser():
@@ -56,7 +59,8 @@ def entrypoint():
         case "status":
             StatusCommand(root_dir, porcelain=args.porcelain).run()
         case "diff":
-            DiffCommand(root_dir, cached=args.cached).run()
+            with pager():
+                DiffCommand(root_dir, cached=args.cached).run()
         case _:
             pass
 

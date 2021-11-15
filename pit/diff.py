@@ -27,8 +27,8 @@ class Edit:
 
 class Diff:
     def __init__(self, a: str | bytes | list, b: str | bytes | list):
-        self.a = [Line(i, line) for i, line in enumerate(a)]
-        self.b = [Line(i, line) for i, line in enumerate(b)]
+        self.a = [Line(i + 1, line) for i, line in enumerate(a)]
+        self.b = [Line(i + 1, line) for i, line in enumerate(b)]
 
     @classmethod
     def from_lines(cls, a: bytes, b: bytes) -> "Diff":
@@ -45,36 +45,6 @@ class Diff:
                 diff.append(Edit(" ", a_line=self.a[prev_x], b_line=self.b[prev_y]))
         diff.reverse()
         return diff
-
-    def shortest_edit_v2(self):
-        n, m = len(self.a), len(self.b)
-        max_ = n + m
-
-        path = namedtuple("path", ["x", "history"])
-        histories = {1: path(0, [])}
-        for d in range(max_ + 1):
-            for k in range(-d, d + 1, 2):
-                add = k == -d or (k != d and histories[k - 1].x < histories[k + 1].x)
-
-                prev_x, history = deepcopy(
-                    histories[k + 1] if add else histories[k - 1]
-                )
-                x = prev_x if add else prev_x + 1
-                y = x - k
-                if x != 0 or y != 0:
-                    if add:
-                        history.append(Edit("+", None, self.b[y - 1]))
-                    else:
-                        history.append(Edit("-", self.a[x - 1], None))
-                # 处理字符相同，可以跳过图中对角线的情况
-                while x < n and y < m and self.a[x].text == self.b[y].text:
-                    history.append(Edit(" ", self.a[x], self.b[y]))
-                    x, y = x + 1, y + 1
-
-                if x >= n and y >= m:
-                    return history
-                else:
-                    histories[k] = path(x, history)
 
     def shortest_edit(self):
         n, m = len(self.a), len(self.b)
@@ -138,6 +108,36 @@ class Diff:
             if d > 0:
                 yield (prev_x, prev_y), (x, y)
             x, y = prev_x, prev_y
+
+    def shortest_edit_v2(self):
+        n, m = len(self.a), len(self.b)
+        max_ = n + m
+
+        path = namedtuple("path", ["x", "history"])
+        histories = {1: path(0, [])}
+        for d in range(max_ + 1):
+            for k in range(-d, d + 1, 2):
+                add = k == -d or (k != d and histories[k - 1].x < histories[k + 1].x)
+
+                prev_x, history = deepcopy(
+                    histories[k + 1] if add else histories[k - 1]
+                )
+                x = prev_x if add else prev_x + 1
+                y = x - k
+                if x != 0 or y != 0:
+                    if add:
+                        history.append(Edit("+", None, self.b[y - 1]))
+                    else:
+                        history.append(Edit("-", self.a[x - 1], None))
+                # 处理字符相同，可以跳过图中对角线的情况
+                while x < n and y < m and self.a[x].text == self.b[y].text:
+                    history.append(Edit(" ", self.a[x], self.b[y]))
+                    x, y = x + 1, y + 1
+
+                if x >= n and y >= m:
+                    return history
+                else:
+                    histories[k] = path(x, history)
 
 
 if __name__ == "__main__":
