@@ -67,7 +67,7 @@ class StatusCommand(BaseCommand):
                 git_path = GitPath(path, root_dir=status.root_dir)
                 lines.append(f"\t{Color.RED}{git_path}{Color.RESET_ALL}")
         if not lines:
-            lines.append("nothing to commit, working directory clean")
+            return "nothing to commit, working directory clean"
         return "".join(["\n".join(lines), "\n"])
 
     def _status_txt(self, file_path: str, status: FileStatusGroup) -> str:
