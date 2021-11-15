@@ -94,9 +94,7 @@ class DiffHeader:
         print(
             f"+++ {'b/' if self.b_file.exists else ''}{self.b_file.file_path}{Color.RESET_ALL}"
         )
-        for edit in Diff(
-            self.a_file.data.split(b"\n"), self.b_file.data.split(b"\n")
-        ).diff():
+        for edit in Diff.from_lines(self.a_file.data, self.b_file.data).diff():
             print(edit)
 
 
