@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import re
-from itertools import chain
+from functools import cached_property
 from pathlib import Path
 import hashlib
 
@@ -79,6 +79,10 @@ class IndexEntry:
     file_hash: bytes
     file_path_length: int
     file_path: str
+
+    @cached_property
+    def oid(self) -> str:
+        return self.file_hash.hex()
 
     def to_tree_entry(self) -> TreeEntry:
         return TreeEntry(oid=self.file_hash.hex(), path=self.file_path, mode=self.mode)
@@ -171,6 +175,9 @@ class IndexEntry:
 
 
 class Index:
+    entries: dict[str, IndexEntry]
+    header: IndexHeader
+
     def __init__(self, root_dir: Path):
         self._root_dir = root_dir
         self._git_dir = self._root_dir / ".git"

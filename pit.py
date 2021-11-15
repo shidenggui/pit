@@ -3,6 +3,7 @@ import os
 
 from pit.commands.add import AddCommand
 from pit.commands.commit import CommitCommand
+from pit.commands.diff import DiffCommand
 from pit.commands.init import InitCommand
 from pit.commands.status import StatusCommand
 
@@ -32,6 +33,10 @@ def generate_parser():
     status_cmd.set_defaults(cmd="status")
     status_cmd.add_argument('--porcelain', action="store_true")
 
+    diff_cmd = subparsers.add_parser("diff", help="diff help")
+    diff_cmd.set_defaults(cmd="diff")
+    diff_cmd.add_argument('--cached', action="store_true")
+
     return parser
 
 
@@ -50,6 +55,8 @@ def entrypoint():
             AddCommand(root_dir, paths=args.files).run()
         case "status":
             StatusCommand(root_dir, porcelain=args.porcelain).run()
+        case "diff":
+            DiffCommand(root_dir, cached=args.cached).run()
         case _:
             pass
 

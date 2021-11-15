@@ -1,4 +1,5 @@
 from dataclasses import dataclass, InitVar
+from functools import cached_property
 from pathlib import Path
 
 
@@ -59,3 +60,12 @@ class AuthorSign:
             self.timestamp,
             self.timezone.encode(),
         )
+
+
+@dataclass()
+class ObjectId:
+    object_id: str
+
+    @cached_property
+    def short_id(self):
+        return self.object_id[:7]
