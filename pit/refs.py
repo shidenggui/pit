@@ -1,5 +1,8 @@
 from pathlib import Path
 
+from exceptions import BranchAlreadyExists
+from pit.values import BranchName
+
 
 class Refs:
     def __init__(self, root_dir: Path):
@@ -15,15 +18,27 @@ class Refs:
     def update_head(self, oid: str):
         self._ref_head().write_text(oid)
 
+    def create_branch(self, name: str, oid: str):
+        branch_name = BranchName(name)
+        branch_path = self.refs_dir / "heads" / str(branch_name)
+        if branch_path.exists():
+            raise BranchAlreadyExists(str(branch_name))
+        branch_path.write_text(oid)
+
+    def _write_branch(self, path: Path, oid: str):
+        path.write_text(oid)
+
+    def read_head(self) -> str | None:
+        return (
+            self._ref_head().read_text().strip() if self._ref_head().exists() else None
+        )
+
     def _ref_head(self) -> Path:
         ref = self.head.read_text().strip()
         ref_head = self.git_dir / ref[5:]
         if not ref_head.exists():
             ref_head.parent.mkdir(parents=True, exist_ok=True)
         return ref_head
-
-    def read_head(self) -> str | None:
-        return self._ref_head().read_text().strip() if self._ref_head().exists() else None
 
 
 if __name__ == "__main__":

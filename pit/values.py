@@ -2,6 +2,8 @@ from dataclasses import dataclass, InitVar
 from functools import cached_property
 from pathlib import Path
 
+from exceptions import InvalidBranchName
+
 
 @dataclass(order=True)
 class GitPath:
@@ -69,3 +71,22 @@ class ObjectId:
     @cached_property
     def short_id(self):
         return self.object_id[:7]
+
+
+@dataclass()
+class BranchName:
+    name: str
+
+    def __post_init__(self):
+        if self.name.startswith("."):
+            self._raise()
+        if self.name.endswith(".lock"):
+            self._raise()
+        if any(s in self.name for s in ("^", "~", "/", "..", "@{")):
+            self._raise()
+
+    def _raise(self):
+        raise InvalidBranchName(self.name)
+
+    def __str__(self):
+        return self.name

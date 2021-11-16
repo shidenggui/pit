@@ -4,6 +4,7 @@ from pathlib import Path
 import zlib
 from typing import Type
 
+from exceptions import InvalidRevision, AmbiguousRevision
 from pit.git_object import GitObject, Tree, Commit, Blob
 from pit.index import Index
 
@@ -54,6 +55,22 @@ class Database:
     def load(self, object_id: str) -> GitObject:
         object_id = ObjectPath(object_id, self.root_dir)
         return object_id.load()
+
+    def prefix_match(self, prefix_oid: str) -> str:
+        if len(prefix_oid) < 2:
+            raise InvalidRevision(prefix_oid)
+
+        prefix_dir = self.objects_dir / prefix_oid[:2]
+        if not prefix_dir.exists():
+            raise InvalidRevision(prefix_oid)
+
+        objects = list(prefix_dir.glob(f'{prefix_oid[2:]}*'))
+        if not objects:
+            raise InvalidRevision(prefix_oid)
+        if len(objects) >=2 :
+            raise AmbiguousRevision(prefix_oid)
+
+        return f'{prefix_oid[:2]}{objects[0].name}'
 
     def store_index(self, index: Index):
         self.index_path.parent.mkdir(parents=True, exist_ok=True)

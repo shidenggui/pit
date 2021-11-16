@@ -4,6 +4,7 @@ import subprocess
 import sys
 
 from pit.commands.add import AddCommand
+from pit.commands.branch import BranchCommand
 from pit.commands.commit import CommitCommand
 from pit.commands.diff import DiffCommand
 from pit.commands.init import InitCommand
@@ -40,6 +41,11 @@ def generate_parser():
     diff_cmd.set_defaults(cmd="diff")
     diff_cmd.add_argument('--cached', action="store_true")
 
+    branch_cmd = subparsers.add_parser("branch", help="branch help")
+    branch_cmd.set_defaults(cmd="branch")
+    branch_cmd.add_argument('name', nargs=1)
+    branch_cmd.add_argument('revision', nargs='?', default=None)
+
     return parser
 
 
@@ -61,8 +67,10 @@ def entrypoint():
         case "diff":
             with pager():
                 DiffCommand(root_dir, cached=args.cached).run()
+        case "branch":
+            BranchCommand(root_dir, name=args.name[0], revision=args.revision).run()
         case _:
-            pass
+            print('Unsupported command: ', args.cmd)
 
 
 if __name__ == "__main__":
