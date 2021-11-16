@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from exceptions import BranchAlreadyExists
+from pit.exceptions import BranchAlreadyExists
 from pit.values import BranchName
 
 

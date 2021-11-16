@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 import re
 
-from exceptions import UnknownRevision, InvalidRevision
-from pit.git_object import Commit, GitObject
+from pit.exceptions import UnknownRevision, InvalidRevision
+from pit.git_object import Commit
 from pit.repository import Repository
 
 
@@ -15,8 +14,8 @@ class Revision:
     ANCESTOR_MATCH = r"([~\^]+)(\d*)"
 
     @classmethod
-    def resolve(cls, revesion: str, repo: Repository) -> str:
-        ref, parents = cls._parse(revesion)
+    def resolve(cls, revision: str, *, repo: Repository) -> str:
+        ref, parents = cls._parse(revision)
         if ref.lower() in ("head", "@"):
             ref = repo.refs.read_head()
         else:
@@ -24,16 +23,16 @@ class Revision:
 
         commit = repo.database.load(ref)
         if not isinstance(commit, Commit):
-            raise InvalidRevision(revesion)
+            raise InvalidRevision(revision)
 
         for _ in range(parents):
             ref = commit.parent_oid
             if not ref:
-                raise UnknownRevision(revesion)
+                raise UnknownRevision(revision)
 
             commit = repo.database.load(ref)
             if not isinstance(commit, Commit):
-                raise InvalidRevision(revesion)
+                raise InvalidRevision(revision)
 
         return ref
 

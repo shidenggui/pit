@@ -2,7 +2,7 @@ from dataclasses import dataclass, InitVar
 from functools import cached_property
 from pathlib import Path
 
-from exceptions import InvalidBranchName
+from pit.exceptions import InvalidBranchName
 
 
 @dataclass(order=True)

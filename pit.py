@@ -5,6 +5,7 @@ import sys
 
 from pit.commands.add import AddCommand
 from pit.commands.branch import BranchCommand
+from pit.commands.checkout import CheckoutCommand
 from pit.commands.commit import CommitCommand
 from pit.commands.diff import DiffCommand
 from pit.commands.init import InitCommand
@@ -46,6 +47,10 @@ def generate_parser():
     branch_cmd.add_argument('name', nargs=1)
     branch_cmd.add_argument('revision', nargs='?', default=None)
 
+    checkout_cmd = subparsers.add_parser("checkout", help="checkout help")
+    checkout_cmd.set_defaults(cmd="checkout")
+    checkout_cmd.add_argument('revision', nargs='?', default=None)
+
     return parser
 
 
@@ -69,6 +74,8 @@ def entrypoint():
                 DiffCommand(root_dir, cached=args.cached).run()
         case "branch":
             BranchCommand(root_dir, name=args.name[0], revision=args.revision).run()
+        case "checkout":
+            CheckoutCommand(root_dir, revision=args.revision).run()
         case _:
             print('Unsupported command: ', args.cmd)
 

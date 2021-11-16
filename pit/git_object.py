@@ -98,7 +98,7 @@ class Commit(GitObject):
         )
 
 
-@dataclass()
+@dataclass(unsafe_hash=True)
 class TreeEntry:
     oid: str
     path: str
@@ -110,6 +110,9 @@ class TreeEntry:
             Path(self.path).name.encode(),
             bytes.fromhex(self.oid),
         )
+
+    def is_dir(self) -> bool:
+        return GitFileMode(self.mode).is_dir()
 
     @classmethod
     def from_raw(cls, raw: bytes) -> "TreeEntry":

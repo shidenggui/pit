@@ -2,9 +2,8 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 import zlib
-from typing import Type
 
-from exceptions import InvalidRevision, AmbiguousRevision
+from pit.exceptions import InvalidRevision, AmbiguousRevision
 from pit.git_object import GitObject, Tree, Commit, Blob
 from pit.index import Index
 
@@ -29,7 +28,6 @@ class ObjectPath:
                 return Blob.from_raw(raw)
             case _:
                 raise NotImplementedError
-
 
 
 class Database:
