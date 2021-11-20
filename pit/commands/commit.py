@@ -63,7 +63,11 @@ class CommitCommand(BaseCommand):
 
         root_tree = construct_tree_object(index_tree, Tree(entries=[]), parents=[""])
         tree_oid = root_tree.entries[0].oid
-        if self.repo.database.has_exists(tree_oid):
+        if (
+            self.repo.database.has_exists(tree_oid)
+            # Also diff from the previous commit's tree oid
+            and self.repo.database.load(self.repo.refs.read_head()).tree_oid == tree_oid
+        ):
             print("nothing to commit, working tree clean")
             return
 
@@ -82,4 +86,4 @@ class CommitCommand(BaseCommand):
             parent_oid=self.repo.refs.read_head(),
         )
         self.repo.database.store(commit)
-        self.repo.refs.update_head(commit.oid)
+        self.repo.refs.update_ref_head(commit.oid)

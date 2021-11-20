@@ -43,3 +43,15 @@ class AmbiguousRevision(PitError):
     def __str__(self):
         return f"""error: short SHA1 {self.revision} is ambiguous 
 fatal: Not a valid object name: '{self.revision}'"""
+
+
+class CheckoutConflict(PitError):
+    def __init__(self, conflicts: list[str]):
+        self.conflicts = conflicts
+
+    def __str__(self):
+        files = "\n".join([f"    {path}" for path in self.conflicts])
+        return f"""error: The following untracked working tree files would be overwritten by checkout:
+{files}
+Please move or remove them before you switch branches.
+Aborting"""

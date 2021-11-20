@@ -25,7 +25,9 @@ class TreeDiff:
     """Diff between two commits"""
 
     @classmethod
-    def diff(cls, before: str, after: str, *, repo: Repository) -> dict:
+    def diff(
+        cls, before: str, after: str, *, repo: Repository
+    ) -> dict[str, (TreeEntry, TreeEntry)]:
         return {
             str(path): entry
             for path, entry in cls._diff(

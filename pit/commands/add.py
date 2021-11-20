@@ -34,7 +34,11 @@ class AddCommand(BaseCommand):
             else:
                 self.repo.database.store(Blob(path.read_bytes()))
                 self.repo.index.add_file(path)
+
+        for deleted in self.repo.status.workspace_deleted:
+            self.repo.index.remove_file(deleted)
         self.repo.database.store_index(self.repo.index)
+
 
     def _should_ignore(self, path: Path):
         return any(ignore in path.parts for ignore in self.repo.ignores)

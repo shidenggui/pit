@@ -1,6 +1,8 @@
 from pprint import pprint
 
 from pit.commands.base import BaseCommand
+from pit.exceptions import CheckoutConflict
+from pit.migration import Migration
 from pit.revesion import Revision
 from pit.tree_diff import TreeDiff
 
@@ -16,7 +18,17 @@ class CheckoutCommand(BaseCommand):
 
         oid = Revision.resolve(self.revision, repo=self.repo)
         after_commit = self.repo.database.load(oid)
+
         diff = TreeDiff.diff(
             before_commit.tree_oid, after_commit.tree_oid, repo=self.repo
         )
-        pprint(diff)
+        try:
+            Migration(self.repo).apply(diff)
+        except CheckoutConflict as e:
+            print(e)
+            return
+
+        if self.revision in self.repo.refs.list_branches():
+            self.repo.refs.update_head(branch=self.revision)
+        else:
+            self.repo.refs.update_head(oid=after_commit.oid)
