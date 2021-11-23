@@ -81,33 +81,36 @@ class Repository:
                 status.workspace_deleted.add(index_file)
 
         # check index / commit differences
-        # noinspection PyTypeChecker
-        commit: Commit = self.database.load(self.refs.read_head())
-        # noinspection PyTypeChecker
-        tree: Tree = self.database.load(commit.tree_oid)
+        if self.refs.read_head():
+            # noinspection PyTypeChecker
+            commit: Commit = self.database.load(self.refs.read_head())
+            # noinspection PyTypeChecker
+            tree: Tree = self.database.load(commit.tree_oid)
 
-        def flatten_tree(
-            tree_entries: list[TreeEntry], parent: str = None
-        ) -> list[TreeEntry]:
-            flatten = []
-            for entry in tree_entries:
-                entry_path = f"{parent}/{entry.path}" if parent else entry.path
-                if GitFileMode(entry.mode).is_file():
-                    entry.path = entry_path
-                    flatten.append(entry)
-                    continue
-                # noinspection PyTypeChecker
-                sub_tree: Tree = self.database.load(entry.oid)
-                flatten.extend(
-                    flatten_tree(
-                        sub_tree.entries,
-                        parent=entry_path,
+            def flatten_tree(
+                tree_entries: list[TreeEntry], parent: str = None
+            ) -> list[TreeEntry]:
+                flatten = []
+                for entry in tree_entries:
+                    entry_path = f"{parent}/{entry.path}" if parent else entry.path
+                    if GitFileMode(entry.mode).is_file():
+                        entry.path = entry_path
+                        flatten.append(entry)
+                        continue
+                    # noinspection PyTypeChecker
+                    sub_tree: Tree = self.database.load(entry.oid)
+                    flatten.extend(
+                        flatten_tree(
+                            sub_tree.entries,
+                            parent=entry_path,
+                        )
                     )
-                )
-            return flatten
+                return flatten
 
-        flatten_entries = flatten_tree(tree.entries)
-        commit_entries: dict[str, TreeEntry] = {e.path: e for e in flatten_entries}
+            flatten_entries = flatten_tree(tree.entries)
+            commit_entries: dict[str, TreeEntry] = {e.path: e for e in flatten_entries}
+        else:
+            commit_entries = {}
         status.head_tree = commit_entries
 
         for entry_path, index_entry in self.index.entries.items():

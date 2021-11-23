@@ -66,6 +66,7 @@ class CommitCommand(BaseCommand):
         if (
             self.repo.database.has_exists(tree_oid)
             # Also diff from the previous commit's tree oid
+            and self.repo.refs.read_head()
             and self.repo.database.load(self.repo.refs.read_head()).tree_oid == tree_oid
         ):
             print("nothing to commit, working tree clean")

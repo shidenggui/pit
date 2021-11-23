@@ -48,7 +48,7 @@ class Refs:
             return None
         head = self.head.read_text().strip()
         if head.startswith("ref: "):
-            return self._ref_head().read_text().strip()
+            return self._ref_head().read_text().strip() or None
         return head
 
     def _ref_head(self) -> Path:
@@ -56,6 +56,7 @@ class Refs:
         ref_head = self.git_dir / ref[5:]
         if not ref_head.exists():
             ref_head.parent.mkdir(parents=True, exist_ok=True)
+            ref_head.write_text("")
         return ref_head
 
 
