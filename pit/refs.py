@@ -15,6 +15,9 @@ class Refs:
         self.refs_dir.mkdir(parents=True, exist_ok=True)
         self.head.write_text("ref: refs/heads/main")
 
+    def is_detached(self) -> bool:
+        return not self.head.read_text().startswith("ref: ")
+
     def update_ref_head(self, oid: str):
         ref_path = self._find_ref(self.head)
         ref_path.write_text(oid)
@@ -63,6 +66,11 @@ class Refs:
         branch_name = BranchName(name)
         branch_path = self.refs_dir / str(branch_name)
         return branch_path.read_text().strip()
+
+    def current_branch(self) -> str | None:
+        if self.is_detached():
+            return None
+        return self.head.read_text().split("/")[-1]
 
     def _write_branch(self, path: Path, oid: str):
         path.write_text(oid)
