@@ -28,7 +28,7 @@ def generate_parser():
 
     commit_cmd = subparsers.add_parser("commit", help="commit help")
     commit_cmd.set_defaults(cmd="commit")
-    commit_cmd.add_argument('-m', help="commit message", default='')
+    commit_cmd.add_argument('-m', '--message', help="commit message", default='')
 
     add_cmd = subparsers.add_parser("add", help="add help")
     add_cmd.set_defaults(cmd="add")
@@ -44,8 +44,10 @@ def generate_parser():
 
     branch_cmd = subparsers.add_parser("branch", help="branch help")
     branch_cmd.set_defaults(cmd="branch")
-    branch_cmd.add_argument('name', nargs=1)
+    branch_cmd.add_argument('name', nargs='?')
     branch_cmd.add_argument('revision', nargs='?', default=None)
+    branch_cmd.add_argument('-D', '--delete', action='store_true')
+    branch_cmd.add_argument('-v', '--verbose', action='store_true')
 
     checkout_cmd = subparsers.add_parser("checkout", help="checkout help")
     checkout_cmd.set_defaults(cmd="checkout")
@@ -64,7 +66,7 @@ def entrypoint():
             CommitCommand(root_dir,
                           author_name=os.getenv("GIT_AUTHOR_NAME"),
                           author_email=os.getenv("GIT_AUTHOR_EMAIL"),
-                          commit_msg=args.m).run()
+                          commit_msg=args.message).run()
         case "add":
             AddCommand(root_dir, paths=args.files).run()
         case "status":
@@ -73,7 +75,7 @@ def entrypoint():
             with pager():
                 DiffCommand(root_dir, cached=args.cached).run()
         case "branch":
-            BranchCommand(root_dir, name=args.name[0], revision=args.revision).run()
+            BranchCommand(root_dir, name=args.name, revision=args.revision, delete=args.delete, verbose=args.verbose).run()
         case "checkout":
             CheckoutCommand(root_dir, revision=args.revision).run()
         case _:

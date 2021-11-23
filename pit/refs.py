@@ -62,10 +62,14 @@ class Refs:
     def list_branches(self) -> list[str]:
         return [branch.name for branch in self.refs_dir.iterdir()]
 
+    def delete_branch(self, name: str):
+        branch_path = self.refs_dir / str(name)
+        branch_path.unlink(missing_ok=True)
+
     def read_branch(self, name: str) -> str:
         branch_name = BranchName(name)
         branch_path = self.refs_dir / str(branch_name)
-        return branch_path.read_text().strip()
+        return self._find_ref(branch_path).read_text().strip()
 
     def current_branch(self) -> str | None:
         if self.is_detached():

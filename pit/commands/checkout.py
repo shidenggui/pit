@@ -1,5 +1,3 @@
-from pprint import pprint
-
 from pit.commands.base import BaseCommand
 from pit.exceptions import CheckoutConflict
 from pit.git_object import Commit
