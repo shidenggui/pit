@@ -53,7 +53,7 @@ class LogCommand(BaseCommand):
             joined_branches = (
                 f"{Color.CYAN}{Color.BOLD}HEAD -> {Color.RESET_ALL}{joined_branches}"
             )
-        return f"{Color.YELLOW}({Color.RESET_ALL}{joined_branches}{Color.YELLOW}){Color.RESET_ALL}"
+        return f"{Color.YELLOW}({Color.RESET_ALL}{joined_branches}{Color.YELLOW}){Color.RESET_ALL} "
 
     def _show_medium(self, commit: Commit, decoration: str):
         message = "\n    ".join(commit.message.split("\n"))
@@ -68,7 +68,7 @@ Date:   {datetime.datetime.fromtimestamp(commit.author.timestamp).strftime("%a %
 
     def _show_oneline(self, commit: Commit, decoration: str):
         print(
-            f"""{Color.YELLOW}{ObjectId(commit.oid).short_id}{Color.RESET_ALL} {decoration} {commit.title}"""
+            f"""{Color.YELLOW}{ObjectId(commit.oid).short_id}{Color.RESET_ALL} {decoration}{commit.title}"""
         )
 
     def _find_parent(self, parent: str):
