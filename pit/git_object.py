@@ -58,6 +58,10 @@ class Commit(GitObject):
         content = b"\n".join(contents)
         return b"commit %d\x00%s" % (len(content), content)
 
+    @property
+    def title(self) -> str:
+        return self.message.split("\n", 1)[0]
+
     @classmethod
     def from_raw(cls, raw: bytes) -> "Commit":
         """

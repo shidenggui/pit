@@ -9,6 +9,7 @@ from pit.commands.checkout import CheckoutCommand
 from pit.commands.commit import CommitCommand
 from pit.commands.diff import DiffCommand
 from pit.commands.init import InitCommand
+from pit.commands.log import LogCommand
 from pit.commands.status import StatusCommand
 from pit.pager import pager
 
@@ -53,6 +54,10 @@ def generate_parser():
     checkout_cmd.set_defaults(cmd="checkout")
     checkout_cmd.add_argument('revision', nargs='?', default=None)
 
+    log_cmd = subparsers.add_parser("log", help="log help")
+    log_cmd.add_argument('--oneline', action='store_true')
+    log_cmd.set_defaults(cmd="log")
+
     return parser
 
 
@@ -78,6 +83,9 @@ def entrypoint():
             BranchCommand(root_dir, name=args.name, revision=args.revision, delete=args.delete, verbose=args.verbose).run()
         case "checkout":
             CheckoutCommand(root_dir, revision=args.revision).run()
+        case "log":
+            with pager():
+                LogCommand(root_dir, oneline=args.oneline).run()
         case _:
             print('Unsupported command: ', args.cmd)
 

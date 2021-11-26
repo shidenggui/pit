@@ -18,7 +18,7 @@ class Revision:
         ref, parents = cls._parse(revision)
         if ref.lower() in ("head", "@"):
             ref = repo.refs.read_head()
-        elif ref in repo.refs._list_branches():
+        elif ref in repo.refs.list_branches():
             ref = repo.refs.read_branch(ref)
         else:
             ref = repo.database.prefix_match(ref)
