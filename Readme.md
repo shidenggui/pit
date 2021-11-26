@@ -16,4 +16,6 @@ Supported commands:
   * pit branch `<branch>` `<revision>`
   * pit branch -D `<branch>`
 * pit checkout `<branch>/<revision>`
+* pit log
+  * pit log --oneline
 
